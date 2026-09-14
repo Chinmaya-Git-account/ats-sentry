@@ -26,7 +26,7 @@ function asMatchScore(value: unknown): number {
 
 export async function POST(request: Request) {
   // 1. Extract IP for rate limiting
-  const ip = req.headers.get("x-forwarded-for") ?? "127.0.0.1";
+  const ip = request.headers.get("x-forwarded-for") ?? "127.0.0.1";
 
   // 2. Check if the user has scans left
   if (process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN) {
