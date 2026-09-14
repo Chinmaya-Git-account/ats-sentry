@@ -1,16 +1,23 @@
-export type SuggestedRewrite = {
+// lib/types.ts
+
+export interface JargonReplacement {
+  flagged: string;
+  replacement: string;
+}
+
+export interface BulletRewrite {
   original: string;
   rewrite: string;
-};
+}
 
-export type AnalysisResult = {
+export interface AnalysisResult {
   matchScore: number;
   missingHardSkills: string[];
-  corporateJargonFlags: string[];
-  suggestedBulletRewrites: SuggestedRewrite[];
-};
+  corporateJargonFlags: JargonReplacement[];
+  suggestedBulletRewrites: BulletRewrite[];
+}
 
-export type AnalyzeRequest = {
+export interface AnalyzeRequest {
   resumeText: string;
   jobDescriptionText: string;
-};
+}

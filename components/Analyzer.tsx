@@ -134,7 +134,7 @@ export default function Analyzer() {
     const ok = document.execCommand("copy");
     document.body.removeChild(el);
     if (!ok) {
-      throw new Error("copy failed");
+      throw new Error("Copy execution failed");
     }
   }
 
@@ -243,125 +243,136 @@ export default function Analyzer() {
       </div>
 
       {result && (
-  <section className="flex flex-col gap-6 rounded-2xl border border-slate-700/80 bg-slate-900/80 p-6 shadow-2xl shadow-black/30">
-    <div className="flex flex-wrap items-center justify-between gap-4">
-      <div>
-        <h2 className="text-lg font-semibold text-white">
-          Pre-flight results
-        </h2>
-        <p className="mt-1 text-sm text-slate-400">
-          Keyword coverage, gap skills, and rewrite suggestions for ATS
-          parsers.
-        </p>
-      </div>
-
-      {/* Action Zone: Score & Download Button */}
-      <div className="flex items-center gap-4">
-        <button
-          type="button"
-          onClick={() => exportAtsPdf(resumeText, result)}
-          className="rounded-xl border border-emerald-500/40 bg-emerald-500/10 px-4 py-3 text-sm font-semibold text-emerald-300 transition hover:bg-emerald-500/20 active:scale-95"
-        >
-          📥 Download PDF Report
-        </button>
-
-        <div
-          className={`rounded-2xl border px-5 py-3 text-center ${scoreTone(result.matchScore)}`}
-        >
-          <p className="text-[11px] font-semibold uppercase tracking-[0.18em]">
-            Match score
-          </p>
-          <p className="mt-1 text-4xl font-bold tabular-nums">
-            {result.matchScore}%
-          </p>
-        </div>
-      </div>
-    </div>
-
-    <div>
-      <h3 className="mb-3 text-sm font-semibold uppercase tracking-wider text-slate-300">
-        Missing hard skills
-      </h3>
-      {result.missingHardSkills.length === 0 ? (
-        <p className="text-sm text-slate-400">
-          No obvious hard-skill gaps against this description.
-        </p>
-      ) : (
-        <ul className="flex flex-wrap gap-2">
-          {result.missingHardSkills.map((skill, index) => (
-            <li
-              key={skill}
-              className={`rounded-full border px-3 py-1 text-xs font-medium ${skillTone(index)}`}
-            >
-              {skill}
-            </li>
-          ))}
-        </ul>
-      )}
-    </div>
-
-    <div>
-      <h3 className="mb-3 text-sm font-semibold uppercase tracking-wider text-slate-300">
-        Corporate jargon flags
-      </h3>
-      {result.corporateJargonFlags.length === 0 ? (
-        <p className="text-sm text-slate-400">
-          No common corporate jargon detected in the resume.
-        </p>
-      ) : (
-        <ul className="list-disc space-y-2 pl-5 text-sm leading-6 text-slate-200">
-          {result.corporateJargonFlags.map((flag) => (
-            <li key={flag}>{flag}</li>
-          ))}
-        </ul>
-      )}
-    </div>
-
-    <div>
-      <h3 className="mb-3 text-sm font-semibold uppercase tracking-wider text-slate-300">
-        Suggested bullet rewrites
-      </h3>
-      {result.suggestedBulletRewrites.length === 0 ? (
-        <p className="text-sm text-slate-400">
-          No rewrite suggestions for this resume.
-        </p>
-      ) : (
-        <ul className="flex flex-col gap-3">
-          {result.suggestedBulletRewrites.map((item, index) => (
-            <li
-              key={`${item.original}-${index}`}
-              className="rounded-xl border border-slate-700 bg-slate-950/60 p-4"
-            >
-              <p className="text-xs uppercase tracking-wide text-slate-500">
-                Original
+        <section className="flex flex-col gap-6 rounded-2xl border border-slate-700/80 bg-slate-900/80 p-6 shadow-2xl shadow-black/30">
+          <div className="flex flex-wrap items-center justify-between gap-4">
+            <div>
+              <h2 className="text-lg font-semibold text-white">
+                Pre-flight results
+              </h2>
+              <p className="mt-1 text-sm text-slate-400">
+                Keyword coverage, gap skills, and rewrite suggestions for ATS
+                parsers.
               </p>
-              <p className="mt-1 text-sm text-slate-400">{item.original}</p>
-              <p className="mt-3 text-xs uppercase tracking-wide text-slate-500">
-                Rewrite
-              </p>
-              <div className="mt-1 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                <p className="text-sm leading-6 text-slate-100">
-                  {item.rewrite}
+            </div>
+
+            {/* Action Zone: Score & Download Button */}
+            <div className="flex items-center gap-4">
+              <button
+                type="button"
+                onClick={() => exportAtsPdf(resumeText, result)}
+                className="rounded-xl border border-emerald-500/40 bg-emerald-500/10 px-4 py-3 text-sm font-semibold text-emerald-300 transition hover:bg-emerald-500/20 active:scale-95"
+              >
+                📥 Download PDF Report
+              </button>
+
+              <div
+                className={`rounded-2xl border px-5 py-3 text-center ${scoreTone(result.matchScore)}`}
+              >
+                <p className="text-[11px] font-semibold uppercase tracking-[0.18em]">
+                  Match score
                 </p>
-                <button
-                  type="button"
-                  onClick={() => copyRewrite(item.rewrite, index)}
-                  className="shrink-0 rounded-lg border border-slate-600 bg-slate-800 px-3 py-1.5 text-xs font-semibold text-white transition hover:border-sky-400/50 hover:bg-slate-700"
-                >
-                  {copiedIndex === index
-                    ? "Copied"
-                    : copiedIndex === -1
-                      ? "Copy failed"
-                      : "Copy"}
-                </button>
+                <p className="mt-1 text-4xl font-bold tabular-nums">
+                  {result.matchScore}%
+                </p>
               </div>
-            </li>
-          ))}
-        </ul>
+            </div>
+          </div>
+
+          <div>
+            <h3 className="mb-3 text-sm font-semibold uppercase tracking-wider text-slate-300">
+              Missing hard skills
+            </h3>
+            {result.missingHardSkills.length === 0 ? (
+              <p className="text-sm text-slate-400">
+                No obvious hard-skill gaps against this description.
+              </p>
+            ) : (
+              <ul className="flex flex-wrap gap-2">
+                {result.missingHardSkills.map((skill, index) => (
+                  <li
+                    key={`${skill}-${index}`}
+                    className={`rounded-full border px-3 py-1 text-xs font-medium ${skillTone(index)}`}
+                  >
+                    {skill}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+
+          <div>
+            <h3 className="mb-3 text-sm font-semibold uppercase tracking-wider text-slate-300">
+              Corporate Jargon Flags & Replacements
+            </h3>
+            {result.corporateJargonFlags.length === 0 ? (
+              <p className="text-sm text-slate-400">
+                No corporate filler detected in the resume.
+              </p>
+            ) : (
+              <ul className="space-y-2 text-sm text-slate-200">
+                {result.corporateJargonFlags.map((item, idx) => (
+                  <li key={`${item.flagged}-${idx}`} className="flex flex-wrap items-center gap-2">
+                    <span className="line-through text-rose-400 font-mono">
+                      {item.flagged}
+                    </span>
+                    <span className="text-slate-500">→ replace with:</span>
+                    <span className="font-semibold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">
+                      {item.replacement}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+
+          <div>
+            <h3 className="mb-3 text-sm font-semibold uppercase tracking-wider text-slate-300">
+              Suggested bullet rewrites
+            </h3>
+            {result.suggestedBulletRewrites.length === 0 ? (
+              <p className="text-sm text-slate-400">
+                No rewrite suggestions for this resume.
+              </p>
+            ) : (
+              <ul className="flex flex-col gap-3">
+                {result.suggestedBulletRewrites.map((item, index) => (
+                  <li
+                    key={`${item.original}-${index}`}
+                    className="rounded-xl border border-slate-700 bg-slate-950/60 p-4"
+                  >
+                    <p className="text-xs uppercase tracking-wide text-rose-400/80 font-semibold">
+                      Original Bullet in Resume
+                    </p>
+                    <p className="mt-1 text-sm text-slate-300 italic border-l-2 border-slate-700 pl-3">
+                      "{item.original}"
+                    </p>
+
+                    <p className="mt-3 text-xs uppercase tracking-wide text-sky-400/80 font-semibold">
+                      ATS-Optimized Rewrite
+                    </p>
+                    <div className="mt-1 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                      <p className="text-sm leading-6 text-slate-100 font-medium">
+                        {item.rewrite}
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => copyRewrite(item.rewrite, index)}
+                        className="shrink-0 rounded-lg border border-slate-600 bg-slate-800 px-3 py-1.5 text-xs font-semibold text-white transition hover:border-sky-400/50 hover:bg-slate-700"
+                      >
+                        {copiedIndex === index
+                          ? "Copied"
+                          : copiedIndex === -1
+                            ? "Copy failed"
+                            : "Copy"}
+                      </button>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        </section>
       )}
-    </div>
-  </section>
-)}
     </div>
   );
 }
