@@ -1,4 +1,4 @@
-import type { AnalysisResult, SuggestedRewrite } from "./types";
+import type { AnalysisResult, BulletRewrite, JargonReplacement } from "./types";
 
 const HARD_SKILLS = [
   "Python",
@@ -64,66 +64,81 @@ const HARD_SKILLS = [
   "Airflow",
 ];
 
-const JARGON_PATTERNS: { phrase: string; flag: string }[] = [
+const JARGON_PATTERNS: { phrase: string; flagged: string; replacement: string }[] = [
   {
     phrase: "synerg",
-    flag: "“Synergy” language — replace with a concrete collaboration outcome.",
+    flagged: "Synergy / Synergize",
+    replacement: "Collaborated on cross-functional initiatives",
   },
   {
     phrase: "leverage",
-    flag: "“Leverage” is vague — name the tool, process, or data you actually used.",
+    flagged: "Leveraged",
+    replacement: "Implemented / Built using",
   },
   {
     phrase: "circle back",
-    flag: "“Circle back” is filler — describe the decision or follow-up you owned.",
+    flagged: "Circle back",
+    replacement: "Resolved directly / Followed up",
   },
   {
     phrase: "thought leadership",
-    flag: "“Thought leadership” is unmeasurable — cite talks, docs, or adoption.",
+    flagged: "Thought leadership",
+    replacement: "Published architecture specs / Mentored team",
   },
   {
     phrase: "best of breed",
-    flag: "“Best-of-breed” is marketing speak — specify the stack or vendor.",
+    flagged: "Best-of-breed",
+    replacement: "Industry-standard / Benchmarked stack",
   },
   {
     phrase: "move the needle",
-    flag: "“Move the needle” — quantify the metric that actually changed.",
+    flagged: "Move the needle",
+    replacement: "Improved key metric by X%",
   },
   {
     phrase: "low hanging fruit",
-    flag: "“Low-hanging fruit” — name the quick win and its impact.",
+    flagged: "Low-hanging fruit",
+    replacement: "Quick optimization / High-impact quick win",
   },
   {
     phrase: "paradigm",
-    flag: "“Paradigm” rarely survives ATS parsing — use the actual method or model.",
+    flagged: "Paradigm",
+    replacement: "Framework / Architectural pattern",
   },
   {
     phrase: "holistic",
-    flag: "“Holistic” is empty — list the systems or stakeholders you covered.",
+    flagged: "Holistic approach",
+    replacement: "End-to-end implementation",
   },
   {
     phrase: "robust",
-    flag: "“Robust” is a filler adjective — describe reliability, scale, or tests.",
+    flagged: "Robust",
+    replacement: "Fault-tolerant / Scalable",
   },
   {
     phrase: "proactive",
-    flag: "“Proactive” is weak — show the initiative and the result.",
+    flagged: "Proactive",
+    replacement: "Automated / Anticipated and mitigated",
   },
   {
     phrase: "results-driven",
-    flag: "“Results-driven” is a cliché — lead with the result instead.",
+    flagged: "Results-driven",
+    replacement: "Quantified impact (increased throughput by X%)",
   },
   {
     phrase: "dynamic",
-    flag: "“Dynamic” adds no signal — drop it or replace with a specific trait.",
+    flagged: "Dynamic",
+    replacement: "Adaptive / Modular",
   },
   {
     phrase: "go-getter",
-    flag: "“Go-getter” is informal fluff — ATS and recruiters both skip it.",
+    flagged: "Go-getter",
+    replacement: "Spearheaded / Initiated",
   },
   {
     phrase: "team player",
-    flag: "“Team player” is generic — describe cross-functional work you shipped.",
+    flagged: "Team player",
+    replacement: "Partnered across engineering and product teams",
   },
 ];
 
@@ -205,12 +220,15 @@ export function analyzeResume(
       : Math.round((matchedCount / jdSkills.length) * 100);
 
   const resumeNorm = normalize(resumeText);
-  const corporateJargonFlags = JARGON_PATTERNS.filter(({ phrase }) =>
+  const corporateJargonFlags: JargonReplacement[] = JARGON_PATTERNS.filter(({ phrase }) =>
     resumeNorm.includes(phrase),
-  ).map(({ flag }) => flag);
+  ).map(({ flagged, replacement }) => ({
+    flagged,
+    replacement,
+  }));
 
   const bullets = extractBullets(resumeText);
-  const suggestedBulletRewrites: SuggestedRewrite[] = bullets
+  const suggestedBulletRewrites: BulletRewrite[] = bullets
     .map((original) => ({ original, rewrite: rewriteBullet(original) }))
     .filter(({ original, rewrite }) => original.replace(/^[-•*·]\s*/, "") !== rewrite)
     .slice(0, 5);
