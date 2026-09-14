@@ -1,17 +1,39 @@
 import OpenAI from "openai";
 import { NextResponse } from "next/server";
 import { ratelimit } from "@/lib/ratelimit";
+import type { JargonReplacement, BulletRewrite } from "@/lib/types";
 
 export const maxDuration = 60;
 
-const SYSTEM_PROMPT =
-  "You are an ATS compliance scanner and technical recruiter. Analyze the candidate's resume against the target job description. Return a strict JSON object with:\n   - match_score: integer between 0 and 100\n   - missing_hard_skills: string array of technical tools, libraries, or frameworks from the JD missing from the resume\n   - corporate_fluff_flags: string array of passive, unquantified phrases found in the resume\n   - bullet_rewrites: string array of 3 high-impact bullets using the 'Accomplished X by doing Y measured by Z' framework incorporating the missing skills.";
+const SYSTEM_PROMPT = `
+You are an expert ATS optimization auditor. Analyze the submitted resume against the job description.
+
+STRICT RULES FOR OUTPUT:
+1. matchScore: Integer 0-100 reflecting keyword and responsibility alignment.
+2. missingHardSkills: Array of critical technical tools, frameworks, methodologies, or certifications from the JD missing from the resume.
+3. corporateJargonFlags: Array of objects. Find passive, unmeasurable corporate filler phrases in the resume, and provide high-impact, active replacement verbs.
+   Format: [{ "flagged": "Proven expertise", "replacement": "Architected / Engineered" }]
+4. suggestedBulletRewrites: Array of exactly 3 objects.
+   - "original": You MUST find and copy a VERBATIM sentence directly from the user's resume text that is weak, passive, or missing quantifiable metrics. DO NOT write "ATS-optimized rewrite". Copy the literal line from their experience section.
+   - "rewrite": Rewrite THAT SPECIFIC line using the XYZ Impact formula ("Accomplished [X], as measured by [Y], by doing [Z]").
+
+Return ONLY valid JSON matching this schema:
+{
+  "matchScore": number,
+  "missingHardSkills": string[],
+  "corporateJargonFlags": [
+    { "flagged": string, "replacement": string }
+  ],
+  "suggestedBulletRewrites": [
+    { "original": string, "rewrite": string }
+  ]
+}
+`;
 
 function asStringArray(value: unknown): string[] {
   if (!Array.isArray(value)) {
     return [];
   }
-
   return value.filter((item): item is string => typeof item === "string");
 }
 
@@ -20,27 +42,62 @@ function asMatchScore(value: unknown): number {
   if (!Number.isFinite(score)) {
     return 0;
   }
-
   return Math.max(0, Math.min(100, Math.round(score)));
 }
 
+function asJargonReplacements(value: unknown): JargonReplacement[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+  return value
+    .filter(
+      (item): item is { flagged: string; replacement: string } =>
+        typeof item === "object" &&
+        item !== null &&
+        typeof (item as any).flagged === "string" &&
+        typeof (item as any).replacement === "string",
+    )
+    .map((item) => ({
+      flagged: item.flagged,
+      replacement: item.replacement,
+    }));
+}
+
+function asBulletRewrites(value: unknown): BulletRewrite[] {
+  if (!Array.isArray(value)) return [];
+  return value
+    .filter(
+      (item): item is { original: string; rewrite: string } =>
+        typeof item === "object" &&
+        item !== null &&
+        typeof (item as any).original === "string" &&
+        typeof (item as any).rewrite === "string",
+    )
+    .map((item) => ({
+      original: item.original,
+      rewrite: item.rewrite,
+    }));
+}
+
 export async function POST(request: Request) {
-  // 1. Extract IP for rate limiting
+  // 1. Rate Limiter Check via Upstash Redis
   const ip = request.headers.get("x-forwarded-for") ?? "127.0.0.1";
 
-  // 2. Check if the user has scans left
   if (process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN) {
-    const { success, remaining, reset } = await ratelimit.limit(ip);
+    const { success, reset } = await ratelimit.limit(ip);
 
     if (!success) {
       return NextResponse.json(
-        { 
-          error: `Rate limit reached. You have used your 3 free daily scans. Resets in ${Math.ceil((reset - Date.now()) / (1000 * 60 * 60))} hours.` 
+        {
+          error: `Rate limit reached. You have used your 3 free daily scans. Resets in ${Math.ceil(
+            (reset - Date.now()) / (1000 * 60 * 60),
+          )} hours.`,
         },
-        { status: 429 }
+        { status: 429 },
       );
     }
   }
+
   let body: unknown;
 
   try {
@@ -113,15 +170,10 @@ export async function POST(request: Request) {
 
     return NextResponse.json(
       {
-        matchScore: asMatchScore(parsed.match_score),
-        missingHardSkills: asStringArray(parsed.missing_hard_skills),
-        corporateJargonFlags: asStringArray(parsed.corporate_fluff_flags),
-        suggestedBulletRewrites: asStringArray(parsed.bullet_rewrites).map(
-          (rewrite) => ({
-            original: "ATS-optimized rewrite",
-            rewrite,
-          }),
-        ),
+        matchScore: asMatchScore(parsed.matchScore),
+        missingHardSkills: asStringArray(parsed.missingHardSkills),
+        corporateJargonFlags: asJargonReplacements(parsed.corporateJargonFlags),
+        suggestedBulletRewrites: asBulletRewrites(parsed.suggestedBulletRewrites),
       },
       { status: 200 },
     );
