@@ -115,6 +115,8 @@ function asBulletRewrites(value: unknown): BulletRewrite[] {
 export async function POST(request: Request) {
   const ip = request.headers.get("x-forwarded-for") ?? "127.0.0.1";
 
+  /* TEMPORARILY DISABLED FOR TESTING
+
   if (process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN) {
     const { success, reset } = await ratelimit.limit(ip);
 
@@ -129,6 +131,7 @@ export async function POST(request: Request) {
       );
     }
   }
+    */
 
   let body: unknown;
 
