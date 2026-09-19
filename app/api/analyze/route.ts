@@ -1,9 +1,16 @@
 import OpenAI from "openai";
 import { NextResponse } from "next/server";
-import { ratelimit } from "@/lib/ratelimit";
+import { createClient as createServerSupabase } from "@/lib/supabase/server";
+import { createClient as createAdminSupabase } from "@supabase/supabase-js";
 import type { JargonReplacement, BulletRewrite } from "@/lib/types";
 
 export const maxDuration = 60;
+
+// Initialize Supabase Admin client for secure backend database mutations
+const adminSupabase = createAdminSupabase(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
+);
 
 export interface AuditRecommendation {
   priority: "HIGH" | "MEDIUM" | "LOW";
@@ -113,28 +120,22 @@ function asBulletRewrites(value: unknown): BulletRewrite[] {
 }
 
 export async function POST(request: Request) {
-  const ip = request.headers.get("x-forwarded-for") ?? "127.0.0.1";
+  // 1. Authenticate User via Supabase Session
+  const supabase = await createServerSupabase();
+  const {
+    data: { user },
+    error: authError,
+  } = await supabase.auth.getUser();
 
-  /* TEMPORARILY DISABLED FOR TESTING */
+  if (authError || !user) {
+    return NextResponse.json(
+      { error: "Please sign in with Google or Email to run an ATS scan." },
+      { status: 401 },
+    );
+  }
 
-  if (process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN) {
-    const { success, reset } = await ratelimit.limit(ip);
-
-    if (!success) {
-      return NextResponse.json(
-        {
-          error: `Rate limit reached. You have used your 3 free daily scans. Resets in ${Math.ceil(
-            (reset - Date.now()) / (1000 * 60 * 60),
-          )} hours.`,
-        },
-        { status: 429 },
-      );
-    }
-  } 
-  
-
+  // 2. Validate Request Body
   let body: unknown;
-
   try {
     body = await request.json();
   } catch {
@@ -177,6 +178,23 @@ export async function POST(request: Request) {
     );
   }
 
+  // 3. Atomically Check & Decrement Scan Credit
+  const { data: remainingCredits, error: creditError } = await adminSupabase.rpc(
+    "decrement_credit",
+    { user_id: user.id },
+  );
+
+  if (creditError || remainingCredits < 0) {
+    return NextResponse.json(
+      {
+        error: "You have used all your scan credits. Upgrade your scan pack to continue.",
+        code: "OUT_OF_CREDITS",
+      },
+      { status: 402 }, // 402 Payment Required triggers the paywall
+    );
+  }
+
+  // 4. Run OpenAI Analysis
   try {
     const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
     const completion = await openai.chat.completions.create({
@@ -193,6 +211,12 @@ export async function POST(request: Request) {
 
     const content = completion.choices[0]?.message?.content;
     if (!content) {
+      // Refund the credit if OpenAI fails to return content
+      await adminSupabase
+        .from("profiles")
+        .update({ scan_credits: remainingCredits + 1 })
+        .eq("id", user.id);
+
       return NextResponse.json(
         { error: "OpenAI returned an empty response." },
         { status: 502 },
@@ -203,6 +227,7 @@ export async function POST(request: Request) {
 
     return NextResponse.json(
       {
+        remainingCredits,
         matchScore: asMatchScore(parsed.matchScore),
         missingHardSkills: asStringArray(parsed.missingHardSkills),
         corporateJargonFlags: asJargonReplacements(parsed.corporateJargonFlags),
@@ -212,6 +237,12 @@ export async function POST(request: Request) {
       { status: 200 },
     );
   } catch (error) {
+    // Refund the credit if the API throws an unexpected error
+    await adminSupabase
+      .from("profiles")
+      .update({ scan_credits: remainingCredits + 1 })
+      .eq("id", user.id);
+
     const message =
       error instanceof Error ? error.message : "OpenAI analysis failed.";
     return NextResponse.json({ error: message }, { status: 502 });
