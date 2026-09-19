@@ -435,12 +435,12 @@ export default function Analyzer() {
               </p>
             </div>
             <a
-              href="https://rzp.io/l/your-razorpay-link-here"
+              href="https://rzp.io/rzp/VeCeX4A"
               target="_blank"
               rel="noopener noreferrer"
               className="shrink-0 rounded-xl bg-emerald-500 px-6 py-3 text-xs font-bold text-slate-950 uppercase tracking-wide transition hover:bg-emerald-400 active:scale-95 shadow-lg shadow-emerald-950/50"
             >
-              Request 48-Hr Teardown (₹1,999)
+              Request 48-Hr Teardown (₹299)
             </a>
           </div>
         </section>
