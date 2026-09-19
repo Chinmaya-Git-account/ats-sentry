@@ -54,7 +54,7 @@ export function exportAtsPdf(resumeText: string, result: AnalysisResult) {
   doc.setFontSize(10);
   doc.setTextColor(51, 65, 85);
   const skillsText =
-    result.missingHardSkills.length > 0
+    result.missingHardSkills && result.missingHardSkills.length > 0
       ? result.missingHardSkills.join(", ")
       : "No critical skill gaps identified against this description.";
   const splitSkills = doc.splitTextToSize(skillsText, maxLineWidth);
@@ -68,7 +68,7 @@ export function exportAtsPdf(resumeText: string, result: AnalysisResult) {
     doc.setFont("helvetica", "bold");
     doc.setFontSize(11);
     doc.setTextColor(15, 23, 42);
-    doc.text("CORPORATE JARGON FLAGS & REPLACEMENTS:", margin, cursorY);
+    doc.text(`CORPORATE JARGON FLAGS & REPLACEMENTS (${result.corporateJargonFlags.length}):`, margin, cursorY);
     cursorY += 16;
 
     doc.setFont("helvetica", "normal");
@@ -85,7 +85,46 @@ export function exportAtsPdf(resumeText: string, result: AnalysisResult) {
     cursorY += 12;
   }
 
-  // 3. Suggested Bullet Rewrites
+  // 3. Actionable Recruiter & ATS Recommendations (NEW SECTION)
+  if (result.recommendations && result.recommendations.length > 0) {
+    checkPageBreak(40);
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(11);
+    doc.setTextColor(15, 23, 42);
+    doc.text(`ACTIONABLE RECRUITER & ATS RECOMMENDATIONS (${result.recommendations.length}):`, margin, cursorY);
+    cursorY += 16;
+
+    result.recommendations.forEach((rec) => {
+      checkPageBreak(35);
+      
+      // Priority Tag styling
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(9);
+      if (rec.priority === "HIGH") {
+        doc.setTextColor(185, 28, 28); // rose-700
+      } else if (rec.priority === "MEDIUM") {
+        doc.setTextColor(217, 119, 6); // amber-600
+      } else {
+        doc.setTextColor(71, 85, 105); // slate-600
+      }
+
+      const headerLine = `[${rec.priority}] ${rec.category}:`;
+      doc.text(headerLine, margin, cursorY);
+      cursorY += 12;
+
+      // Action Instruction
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(9.5);
+      doc.setTextColor(51, 65, 85);
+      const splitAction = doc.splitTextToSize(rec.action, maxLineWidth);
+      checkPageBreak(splitAction.length * 13 + 8);
+      doc.text(splitAction, margin, cursorY);
+      cursorY += splitAction.length * 13 + 8;
+    });
+    cursorY += 12;
+  }
+
+  // 4. Suggested Bullet Rewrites (XYZ Formula)
   if (result.suggestedBulletRewrites && result.suggestedBulletRewrites.length > 0) {
     checkPageBreak(40);
     doc.setFont("helvetica", "bold");

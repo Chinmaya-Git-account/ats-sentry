@@ -74,6 +74,17 @@ function skillTone(index: number) {
     : "border-amber-400/30 bg-amber-500/10 text-amber-200";
 }
 
+function priorityBadge(priority: "HIGH" | "MEDIUM" | "LOW") {
+  switch (priority) {
+    case "HIGH":
+      return "border-rose-500/40 bg-rose-500/15 text-rose-300";
+    case "MEDIUM":
+      return "border-amber-500/40 bg-amber-500/15 text-amber-300";
+    case "LOW":
+      return "border-slate-600 bg-slate-800 text-slate-300";
+  }
+}
+
 export default function Analyzer() {
   const [resumeText, setResumeText] = useState("");
   const [jobDescriptionText, setJobDescriptionText] = useState("");
@@ -162,7 +173,7 @@ export default function Analyzer() {
   return (
     <div className="mx-auto flex w-full max-w-6xl flex-col gap-8">
       <div className="grid gap-5 lg:grid-cols-2">
-        {/* Resume Column */}
+        {/* Resume Input */}
         <div className="flex flex-col gap-3 rounded-2xl border border-slate-700/80 bg-slate-900/70 p-5 shadow-xl shadow-black/20">
           <div className="flex items-center justify-between gap-3">
             <div className="flex items-center gap-3">
@@ -186,7 +197,7 @@ export default function Analyzer() {
           />
         </div>
 
-        {/* Job Description Column */}
+        {/* Job Description Input */}
         <div className="flex flex-col gap-3 rounded-2xl border border-slate-700/80 bg-slate-900/70 p-5 shadow-xl shadow-black/20">
           <div className="flex items-center justify-between gap-3">
             <div className="flex items-center gap-3">
@@ -255,7 +266,7 @@ export default function Analyzer() {
               </p>
             </div>
 
-            {/* Action Zone: Score & Download Button */}
+            {/* Action Zone: Score & PDF Download */}
             <div className="flex items-center gap-4">
               <button
                 type="button"
@@ -278,11 +289,12 @@ export default function Analyzer() {
             </div>
           </div>
 
+          {/* Missing Hard Skills */}
           <div>
             <h3 className="mb-3 text-sm font-semibold uppercase tracking-wider text-slate-300">
-              Missing hard skills
+              Missing hard skills ({result.missingHardSkills?.length || 0})
             </h3>
-            {result.missingHardSkills.length === 0 ? (
+            {!result.missingHardSkills || result.missingHardSkills.length === 0 ? (
               <p className="text-sm text-slate-400">
                 No obvious hard-skill gaps against this description.
               </p>
@@ -300,36 +312,73 @@ export default function Analyzer() {
             )}
           </div>
 
+          {/* All Corporate Jargons & Buzzwords */}
           <div>
-            <h3 className="mb-3 text-sm font-semibold uppercase tracking-wider text-slate-300">
-              Corporate Jargon Flags & Replacements
-            </h3>
-            {result.corporateJargonFlags.length === 0 ? (
+            <div className="mb-3 flex items-center justify-between">
+              <h3 className="text-sm font-semibold uppercase tracking-wider text-slate-300">
+                Corporate Jargon Flags & Replacements ({result.corporateJargonFlags?.length || 0})
+              </h3>
+            </div>
+            {!result.corporateJargonFlags || result.corporateJargonFlags.length === 0 ? (
               <p className="text-sm text-slate-400">
-                No corporate filler detected in the resume.
+                No corporate filler or hollow buzzwords detected in the resume.
               </p>
             ) : (
-              <ul className="space-y-2 text-sm text-slate-200">
+              <div className="grid grid-cols-1 gap-2.5 md:grid-cols-2">
                 {result.corporateJargonFlags.map((item, idx) => (
-                  <li key={`${item.flagged}-${idx}`} className="flex flex-wrap items-center gap-2">
+                  <div
+                    key={`${item.flagged}-${idx}`}
+                    className="flex items-center justify-between gap-3 rounded-lg border border-slate-800 bg-slate-950/60 p-3 text-xs"
+                  >
                     <span className="line-through text-rose-400 font-mono">
-                      {item.flagged}
+                      "{item.flagged}"
                     </span>
-                    <span className="text-slate-500">→ replace with:</span>
-                    <span className="font-semibold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">
+                    <span className="font-medium text-emerald-400 bg-emerald-500/10 px-2.5 py-1 rounded border border-emerald-500/20">
                       {item.replacement}
                     </span>
-                  </li>
+                  </div>
                 ))}
-              </ul>
+              </div>
             )}
           </div>
 
+          {/* All Prioritized Recommendations */}
+          {result.recommendations && result.recommendations.length > 0 && (
+            <div>
+              <h3 className="mb-3 text-sm font-semibold uppercase tracking-wider text-slate-300">
+                Actionable Recruiter & ATS Recommendations ({result.recommendations.length})
+              </h3>
+              <div className="space-y-2">
+                {result.recommendations.map((rec, idx) => (
+                  <div
+                    key={idx}
+                    className="flex items-start gap-3 rounded-xl border border-slate-800 bg-slate-950/60 p-3.5 text-sm"
+                  >
+                    <span
+                      className={`shrink-0 rounded px-2 py-0.5 text-[10px] font-mono font-bold border ${priorityBadge(
+                        rec.priority,
+                      )}`}
+                    >
+                      {rec.priority}
+                    </span>
+                    <div>
+                      <span className="font-semibold text-slate-200">
+                        {rec.category}:{" "}
+                      </span>
+                      <span className="text-slate-400">{rec.action}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Suggested Bullet Rewrites */}
           <div>
             <h3 className="mb-3 text-sm font-semibold uppercase tracking-wider text-slate-300">
-              Suggested bullet rewrites
+              Suggested bullet rewrites ({result.suggestedBulletRewrites?.length || 0})
             </h3>
-            {result.suggestedBulletRewrites.length === 0 ? (
+            {!result.suggestedBulletRewrites || result.suggestedBulletRewrites.length === 0 ? (
               <p className="text-sm text-slate-400">
                 No rewrite suggestions for this resume.
               </p>
@@ -348,7 +397,7 @@ export default function Analyzer() {
                     </p>
 
                     <p className="mt-3 text-xs uppercase tracking-wide text-sky-400/80 font-semibold">
-                      ATS-Optimized Rewrite
+                      ATS-Optimized Rewrite (Google XYZ Formula)
                     </p>
                     <div className="mt-1 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                       <p className="text-sm leading-6 text-slate-100 font-medium">
@@ -370,6 +419,29 @@ export default function Analyzer() {
                 ))}
               </ul>
             )}
+          </div>
+
+          {/* High-Ticket Async Review CTA Card */}
+          <div className="mt-4 rounded-2xl border border-emerald-500/30 bg-gradient-to-r from-emerald-950/20 via-slate-900 to-slate-900 p-6 flex flex-col sm:flex-row items-center justify-between gap-6">
+            <div className="space-y-1">
+              <span className="text-[11px] font-mono uppercase tracking-wider text-emerald-400 font-semibold">
+                // Manual Executive Review
+              </span>
+              <h4 className="text-base font-bold text-white">
+                Want a Senior Engineering Redline of Your Profile?
+              </h4>
+              <p className="text-xs text-slate-400 max-w-xl leading-relaxed">
+                Get a comprehensive 48-hour async audit by an engineering hiring manager. We line-by-line redline your experience bullets, re-engineer your technical impact metrics, and benchmark you against competitive applicants.
+              </p>
+            </div>
+            <a
+              href="https://rzp.io/l/your-razorpay-link-here"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="shrink-0 rounded-xl bg-emerald-500 px-6 py-3 text-xs font-bold text-slate-950 uppercase tracking-wide transition hover:bg-emerald-400 active:scale-95 shadow-lg shadow-emerald-950/50"
+            >
+              Request 48-Hr Teardown (₹1,999)
+            </a>
           </div>
         </section>
       )}

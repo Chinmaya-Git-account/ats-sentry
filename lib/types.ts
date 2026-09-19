@@ -10,14 +10,16 @@ export interface BulletRewrite {
   rewrite: string;
 }
 
+export interface AuditRecommendation {
+  priority: "HIGH" | "MEDIUM" | "LOW";
+  category: string;
+  action: string;
+}
+
 export interface AnalysisResult {
   matchScore: number;
   missingHardSkills: string[];
   corporateJargonFlags: JargonReplacement[];
+  recommendations: AuditRecommendation[];
   suggestedBulletRewrites: BulletRewrite[];
-}
-
-export interface AnalyzeRequest {
-  resumeText: string;
-  jobDescriptionText: string;
 }

@@ -5,17 +5,27 @@ import type { JargonReplacement, BulletRewrite } from "@/lib/types";
 
 export const maxDuration = 60;
 
+export interface AuditRecommendation {
+  priority: "HIGH" | "MEDIUM" | "LOW";
+  category: string;
+  action: string;
+}
+
 const SYSTEM_PROMPT = `
-You are an expert ATS optimization auditor. Analyze the submitted resume against the job description.
+You are an uncompromising, high-status engineering hiring manager and ATS auditor.
+Analyze the submitted resume against the job description.
 
 STRICT RULES FOR OUTPUT:
-1. matchScore: Integer 0-100 reflecting keyword and responsibility alignment.
-2. missingHardSkills: Array of critical technical tools, frameworks, methodologies, or certifications from the JD missing from the resume.
-3. corporateJargonFlags: Array of objects. Find passive, unmeasurable corporate filler phrases in the resume, and provide high-impact, active replacement verbs.
+1. matchScore: Integer 0-100 reflecting keyword, skills, and responsibility alignment.
+2. missingHardSkills: Array of critical technical tools, frameworks, methodologies, libraries, or certifications from the JD missing from the resume.
+3. corporateJargonFlags: Array of objects. Find and extract ALL passive, unmeasurable corporate filler, buzzwords, or weak corporate clichés found in the resume (e.g., "team player", "synergized", "handled", "worked on", "results-driven", "proven track record"). 
+   Do NOT cap or limit this array. Return EVERY instance found with a high-impact, active replacement verb.
    Format: [{ "flagged": "Proven expertise", "replacement": "Architected / Engineered" }]
-4. suggestedBulletRewrites: Array of exactly 3 objects.
-   - "original": You MUST find and copy a VERBATIM sentence directly from the user's resume text that is weak, passive, or missing quantifiable metrics. DO NOT write "ATS-optimized rewrite". Copy the literal line from their experience section.
-   - "rewrite": Rewrite THAT SPECIFIC line using the XYZ Impact formula ("Accomplished [X], as measured by [Y], by doing [Z]").
+4. recommendations: Array of objects. Provide a comprehensive, prioritized list of all actionable structural, technical, and tactical recommendations needed to pass strict ATS parsers and senior recruiter screening.
+   Format: [{ "priority": "HIGH" | "MEDIUM" | "LOW", "category": "Keyword Density" | "Impact Metrics" | "Formatting" | "Scope Deficit", "action": "Specific instruction" }]
+5. suggestedBulletRewrites: Array of 3 to 5 objects.
+   - "original": You MUST find and copy a VERBATIM sentence directly from the user's resume text that is weak, passive, or missing quantifiable metrics. DO NOT invent or summarize text. Copy the literal line from their experience section.
+   - "rewrite": Rewrite THAT SPECIFIC line using the Google XYZ Impact formula ("Accomplished [X], as measured by [Y], by doing [Z]").
 
 Return ONLY valid JSON matching this schema:
 {
@@ -23,6 +33,9 @@ Return ONLY valid JSON matching this schema:
   "missingHardSkills": string[],
   "corporateJargonFlags": [
     { "flagged": string, "replacement": string }
+  ],
+  "recommendations": [
+    { "priority": "HIGH" | "MEDIUM" | "LOW", "category": string, "action": string }
   ],
   "suggestedBulletRewrites": [
     { "original": string, "rewrite": string }
@@ -63,6 +76,26 @@ function asJargonReplacements(value: unknown): JargonReplacement[] {
     }));
 }
 
+function asRecommendations(value: unknown): AuditRecommendation[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+  return value
+    .filter(
+      (item): item is { priority: "HIGH" | "MEDIUM" | "LOW"; category: string; action: string } =>
+        typeof item === "object" &&
+        item !== null &&
+        ["HIGH", "MEDIUM", "LOW"].includes((item as any).priority) &&
+        typeof (item as any).category === "string" &&
+        typeof (item as any).action === "string",
+    )
+    .map((item) => ({
+      priority: item.priority,
+      category: item.category,
+      action: item.action,
+    }));
+}
+
 function asBulletRewrites(value: unknown): BulletRewrite[] {
   if (!Array.isArray(value)) return [];
   return value
@@ -80,7 +113,6 @@ function asBulletRewrites(value: unknown): BulletRewrite[] {
 }
 
 export async function POST(request: Request) {
-  // 1. Rate Limiter Check via Upstash Redis
   const ip = request.headers.get("x-forwarded-for") ?? "127.0.0.1";
 
   if (process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN) {
@@ -113,13 +145,11 @@ export async function POST(request: Request) {
     typeof body !== "object" ||
     body === null ||
     typeof (body as { resumeText?: unknown }).resumeText !== "string" ||
-    typeof (body as { jobDescriptionText?: unknown }).jobDescriptionText !==
-      "string"
+    typeof (body as { jobDescriptionText?: unknown }).jobDescriptionText !== "string"
   ) {
     return NextResponse.json(
       {
-        error:
-          "Expected JSON with string fields resumeText and jobDescriptionText.",
+        error: "Expected JSON with string fields resumeText and jobDescriptionText.",
       },
       { status: 400 },
     );
@@ -173,6 +203,7 @@ export async function POST(request: Request) {
         matchScore: asMatchScore(parsed.matchScore),
         missingHardSkills: asStringArray(parsed.missingHardSkills),
         corporateJargonFlags: asJargonReplacements(parsed.corporateJargonFlags),
+        recommendations: asRecommendations(parsed.recommendations),
         suggestedBulletRewrites: asBulletRewrites(parsed.suggestedBulletRewrites),
       },
       { status: 200 },
