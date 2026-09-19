@@ -20,6 +20,6 @@ export interface AnalysisResult {
   matchScore: number;
   missingHardSkills: string[];
   corporateJargonFlags: JargonReplacement[];
-  recommendations: AuditRecommendation[];
+  recommendations?: AuditRecommendation[];
   suggestedBulletRewrites: BulletRewrite[];
 }
