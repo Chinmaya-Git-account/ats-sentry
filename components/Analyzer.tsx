@@ -92,6 +92,8 @@ export default function Analyzer() {
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<AnalysisResult | null>(null);
   const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
+  const [outOfCredits, setOutOfCredits] = useState(false);
+  const [remainingCredits, setRemainingCredits] = useState<number | null>(null);
 
   const canSubmit = useMemo(
     () => resumeText.trim().length > 0 && jobDescriptionText.trim().length > 0,
@@ -105,6 +107,7 @@ export default function Analyzer() {
 
     setLoading(true);
     setError(null);
+    setOutOfCredits(false);
 
     try {
       const response = await fetch("/api/analyze", {
@@ -113,8 +116,22 @@ export default function Analyzer() {
         body: JSON.stringify({ resumeText, jobDescriptionText }),
       });
 
+      // 401: Unauthorized - prompt user to sign in
+      if (response.status === 401) {
+        alert("Please sign in with Google in the top bar to run your ATS scans.");
+        setLoading(false);
+        return;
+      }
+
+      // 402: Payment Required - user is out of credits
+      if (response.status === 402) {
+        setOutOfCredits(true);
+        setLoading(false);
+        return;
+      }
+
       const payload = (await response.json()) as
-        | AnalysisResult
+        | (AnalysisResult & { remainingCredits?: number })
         | { error?: string };
 
       if (!response.ok) {
@@ -123,6 +140,10 @@ export default function Analyzer() {
             ? payload.error
             : "Analysis failed. Try again.",
         );
+      }
+
+      if ("remainingCredits" in payload && typeof payload.remainingCredits === "number") {
+        setRemainingCredits(payload.remainingCredits);
       }
 
       setResult(payload as AnalysisResult);
@@ -172,6 +193,39 @@ export default function Analyzer() {
 
   return (
     <div className="mx-auto flex w-full max-w-6xl flex-col gap-8">
+      {/* Out of Credits Paywall Card */}
+      {outOfCredits && (
+        <div className="rounded-2xl border border-amber-500/30 bg-slate-900/95 p-6 text-center shadow-2xl">
+          <div className="font-mono text-xs text-amber-400">// AUDIT CEILING REACHED</div>
+          <h3 className="mt-2 text-xl font-bold text-white">
+            You have used your 3 free scan credits.
+          </h3>
+          <p className="mt-2 text-sm text-slate-400">
+            Stop gambling job applications against strict corporate ATS filters.
+          </p>
+
+          <div className="mt-6 flex flex-col sm:flex-row items-center justify-center gap-4">
+            <a
+              href="https://rzp.io/rzp/VeCeX4A"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="w-full sm:w-auto rounded-lg bg-emerald-500 px-6 py-3 text-xs font-bold text-slate-950 uppercase tracking-wide transition hover:bg-emerald-400"
+            >
+              Unlock 25 Scans (₹199)
+            </a>
+
+            <a
+              href="https://rzp.io/rzp/VeCeX4A"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="w-full sm:w-auto rounded-lg border border-slate-700 bg-slate-800 px-6 py-3 text-xs font-semibold text-slate-200 uppercase tracking-wide transition hover:border-slate-500 hover:text-white"
+            >
+              Book 48-Hour Teardown (₹299)
+            </a>
+          </div>
+        </div>
+      )}
+
       <div className="grid gap-5 lg:grid-cols-2">
         {/* Resume Input */}
         <div className="flex flex-col gap-3 rounded-2xl border border-slate-700/80 bg-slate-900/70 p-5 shadow-xl shadow-black/20">
