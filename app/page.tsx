@@ -1,8 +1,17 @@
+"use client";
+
+import { useState } from "react";
 import Analyzer from "@/components/Analyzer";
+import Navbar from "@/components/Navbar";
 
 export default function Home() {
+  const [credits, setCredits] = useState<number | null>(null);
+
   return (
-    <div className="flex flex-1 flex-col bg-slate-950 text-white">
+    <div className="flex min-h-screen flex-1 flex-col bg-slate-950 text-white">
+      {/* 1. Global Navigation Bar with Google OAuth & Live Credit Balance */}
+      <Navbar credits={credits} />
+
       <header className="border-b border-slate-800/80 bg-slate-950/90">
         <div className="mx-auto flex w-full max-w-6xl flex-col gap-2 px-6 py-8">
           <p className="text-xs font-semibold uppercase tracking-[0.22em] text-sky-400">
@@ -20,7 +29,7 @@ export default function Home() {
       </header>
 
       <main className="flex-1 px-6 py-8">
-        <Analyzer />
+        <Analyzer onCreditsUpdated={(newCredits) => setCredits(newCredits)} />
       </main>
     </div>
   );
