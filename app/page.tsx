@@ -9,7 +9,7 @@ export default function Home() {
             ATSSentry
           </p>
           <h1 className="text-2xl font-semibold tracking-tight text-white sm:text-3xl">
-            ATSSentry — Pre-Flight ATS & Resume Gap Analyzer v1
+            ATSSentry — Pre-Flight ATS & Resume Gap Analyzer v2
           </h1>
           <p className="max-w-2xl text-sm leading-6 text-slate-400">
             Compare resume language against a job description before you apply.
