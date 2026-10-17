@@ -4,6 +4,7 @@ import { useMemo, useState, useRef } from "react";
 import type { AnalysisResult } from "@/lib/types";
 import { extractTextFromFile } from "@/lib/extractText";
 import { exportAtsPdf } from "@/lib/generatePdf";
+import RadialMatchGauge from "@/components/RadialMatchGauge";
 
 function FileUploadButton({
   label,
@@ -321,25 +322,16 @@ export default function Analyzer() {
             </div>
 
             {/* Action Zone: Score & PDF Download */}
-            <div className="flex items-center gap-4">
+            <div className="flex flex-col sm:flex-row items-center gap-4">
+              <RadialMatchGauge score={result.matchScore} size={160} />
+              
               <button
                 type="button"
                 onClick={() => exportAtsPdf(resumeText, result)}
-                className="rounded-xl border border-emerald-500/40 bg-emerald-500/10 px-4 py-3 text-sm font-semibold text-emerald-300 transition hover:bg-emerald-500/20 active:scale-95"
+                className="h-fit rounded-xl border border-emerald-500/40 bg-emerald-500/10 px-4 py-3 text-xs font-mono font-semibold text-emerald-300 transition hover:bg-emerald-500/20 active:scale-95 uppercase tracking-wider"
               >
-                📥 Download PDF Report
+                📥 Export PDF Audit
               </button>
-
-              <div
-                className={`rounded-2xl border px-5 py-3 text-center ${scoreTone(result.matchScore)}`}
-              >
-                <p className="text-[11px] font-semibold uppercase tracking-[0.18em]">
-                  Match score
-                </p>
-                <p className="mt-1 text-4xl font-bold tabular-nums">
-                  {result.matchScore}%
-                </p>
-              </div>
             </div>
           </div>
 
